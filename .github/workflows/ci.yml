@@ -1,0 +1,50 @@
+name: CI
+
+#on: [push]
+
+# 在master分支发生push事件时触发。
+on:
+  push:
+    branches:
+      - master
+
+env: # 设置环境变量
+  TZ: Asia/Shanghai # 时区（设置时区可使页面中的`最近更新时间`使用该时区时间）
+
+jobs:
+  build: # 自定义名称
+    runs-on: ubuntu-latest # 运行在虚拟机环境ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+      - name: Checkout # 步骤1
+        uses: actions/checkout@v1 # 使用的动作。格式：userName/repoName。作用：检出仓库，获取源码。 官方actions库：https://github.com/actions
+      - name: Use Node.js ${{ matrix.node-version }} # 步骤2
+        uses: actions/setup-node@v1 # 作用：安装nodejs
+        with:
+          node-version: ${{ matrix.node-version }} # 版本
+      - name: Build-and-deploy # 步骤3
+        run: |
+          remote_addr=`git remote get-url --push origin`
+          commit_info=`git describe --all --always --long`
+          user_name=`git log -1 --pretty=format:'%an'`
+          user_email=`git log -1 --pretty=format:'%ae'`
+          deploy_branch=gh-pages
+          yarn
+          yarn build
+          cd docs/.vuepress/dist
+          git config --global init.defaultBranch $deploy_branch
+          git init
+          git config user.name ${user_name}
+          git config user.email ${user_email}
+          git add -A
+          git commit -m "auto deploy, $commit_info"
+          remote_addr=`echo $remote_addr | awk -F'://' '{print $2}'`
+          remote_addr=https://${user_name}:${{secrets.GITHUB_TOKEN}}@${remote_addr}
+          git remote add origin ${remote_addr}
+          git push origin HEAD:$deploy_branch --force # 推送到github $deploy_branch分支
+
+      # 只提交到github pages也可以使用github-pages-deploy-action，详见: https://github.com/JamesIves/github-pages-deploy-action
