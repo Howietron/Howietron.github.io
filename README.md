@@ -14,4 +14,4 @@
 
 ## ⭐`Star Howietion`
 
-[![Stargazers over time](https://starchart.cc/Howietion/Howietion.github.io.svg)](https://starchart.cc/Howietion/Howietion.github.io)
+[![Stargazers over time](https://starchart.cc/Howietion/Howietron.github.io.github.io.svg)](https://starchart.cc/Howietion/Howietron.github.io.github.io)
