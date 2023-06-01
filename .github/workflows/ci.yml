@@ -28,11 +28,6 @@ jobs:
           node-version: ${{ matrix.node-version }} # 版本
       - name: Build # 步骤3
         run: |
-          remote_addr=`git remote get-url --push origin`
-          commit_info=`git describe --all --always --long`
-          user_name=`git log -1 --pretty=format:'%an'`
-          user_email=`git log -1 --pretty=format:'%ae'`
-          deploy_branch=gh-pages
           yarn
           yarn build
       - name: Deploy
