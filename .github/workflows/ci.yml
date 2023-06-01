@@ -26,7 +26,7 @@ jobs:
         uses: actions/setup-node@v1 # 作用：安装nodejs
         with:
           node-version: ${{ matrix.node-version }} # 版本
-      - name: Build-and-deploy # 步骤3
+      - name: Build # 步骤3
         run: |
           remote_addr=`git remote get-url --push origin`
           commit_info=`git describe --all --always --long`
@@ -35,16 +35,9 @@ jobs:
           deploy_branch=gh-pages
           yarn
           yarn build
-          cd docs/.vuepress/dist
-          git config --global init.defaultBranch $deploy_branch
-          git init
-          git config user.name ${user_name}
-          git config user.email ${user_email}
-          git add -A
-          git commit -m "auto deploy, $commit_info"
-          remote_addr=`echo $remote_addr | awk -F'://' '{print $2}'`
-          remote_addr=https://${user_name}:${{secrets.DEPLOY_TOKEN}}@${remote_addr}
-          git remote add origin ${remote_addr}
-          git push origin HEAD:$deploy_branch --force # 推送到github $deploy_branch分支
-
-      # 只提交到github pages也可以使用github-pages-deploy-action，详见: https://github.com/JamesIves/github-pages-deploy-action
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          token: ${{secrets.DEPLOY_TOKEN}}
+          branch: gh-pages
+          folder: docs/.vuepress/dist
