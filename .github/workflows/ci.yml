@@ -33,6 +33,6 @@ jobs:
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          token: ${{secrets.DEPLOY_TOKEN}}
+          token: ${{secrets.WIKI_TOKEN}}
           branch: gh-pages
           folder: docs/.vuepress/dist
