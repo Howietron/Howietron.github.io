@@ -166,7 +166,7 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
 
     // 博主信息 (显示在首页侧边栏)
     blogger: {
-      avatar: 'https://fastly.jsdelivr.net/gh/xugaoyi/image_store/blog/20200103123203.jpg',
+      avatar: 'https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/202306031748859.gif',
       name: 'Howietron',
       slogan: 'Java全站知识库',
     },
