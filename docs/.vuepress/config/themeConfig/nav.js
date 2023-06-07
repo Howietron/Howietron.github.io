@@ -9,7 +9,7 @@ module.exports = [
           {
             text: '前端文章',
             items: [
-              { text: 'JavaScript', link: '/pages/8143cc480faf9a11/' },
+              { text: 'JavaScript', link: '/pages/a61298/' },
             ],
           },
           {
@@ -41,16 +41,20 @@ module.exports = [
         ],
       },
       {
-        text: '页面',
-        link: '/ui/',
+        text: '后端',
+        link: '/server/',
         items: [
-          { text: 'HTML', link: '/pages/8309a5b876fc95e3/' },
-          { text: 'CSS', link: '/pages/0a83b083bdf257cb/' },
+          { text: 'Java核心基础', link: '/pages/0694db/' },
+          { text: 'Java后端框架', link: '/pages/baf2c1/' },
+          { text: '分布式中间件', link: '/pages/0694db/' },
+          { text: '微服务架构', link: '/pages/85ae20/' },
+          { text: '算法和数据结构', link: '/pages/2724aa/' },
+          { text: '底层必备源码', link: '/pages/659821/' },
         ],
       },
       {
-        text: '技术',
-        link: '/technology/',
+        text: '运维',
+        link: '/devops/',
         items: [
           { text: '技术文档', link: '/pages/9a7ee40fc232253e/' },
           { text: 'GitHub技巧', link: '/pages/4c778760be26d8b3/' },
@@ -65,7 +69,7 @@ module.exports = [
           { text: '学习', link: '/pages/f2a556/' },
           { text: '面试', link: '/pages/aea6571b7a8bae86/' },
           { text: '心情杂货', link: '/pages/2d615df9a36a98ed/' },
-          { text: '实用技巧', link: '/pages/baaa02/' },
+          { text: '实用技巧', link: '/pages/7e66b5/' },
           { text: '友情链接', link: '/friends/' },
         ],
       },

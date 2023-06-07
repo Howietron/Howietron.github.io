@@ -66,7 +66,7 @@ module.exports = {
   blogger: {
     avatar: 'https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/202306031748859.gif',
     name: 'Howietron',
-    slogan: 'Java全站知识库',
+    slogan: '放平心态，偷偷厉害。',
   },
 
 
