@@ -46,7 +46,7 @@ module.exports = [
         items: [
           { text: 'Java核心基础', link: '/pages/0694db/' },
           { text: 'Java后端框架', link: '/pages/baf2c1/' },
-          { text: '分布式中间件', link: '/pages/0694db/' },
+          { text: '分布式中间件', link: '/pages/d860e2/' },
           { text: '微服务架构', link: '/pages/85ae20/' },
           { text: '算法和数据结构', link: '/pages/2724aa/' },
           { text: '底层必备源码', link: '/pages/659821/' },
