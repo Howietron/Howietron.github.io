@@ -16,7 +16,7 @@ module.exports = {
       ]
     },
   ],
-  '/02.页面/': [
+  '/02.页面1/': [
     {
       title: 'html-css',
       collapsable: false,
