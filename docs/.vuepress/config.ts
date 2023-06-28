@@ -336,12 +336,12 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
       {
         choosen: 'gitalk',
         options: {
-          clientID: 'e5389430e0e3bd8919cf',
-          clientSecret: '2300e8944ad5e63878de368d33385acc4692ffd2',
+          clientID: '8ebfe6fc8ccebe010b2a',
+          clientSecret: 'c29add165eac1eee4c1110e4fce386a4d5e14c74',
           repo: 'Howietron.github.io', // GitHub 仓库
           owner: 'Howietron', // GitHub仓库所有者
           admin: ['Howietron'], // 对仓库有写权限的人
-          // distractionFreeMode: true,
+          distractionFreeMode: false,
           pagerDirection: 'last', // 'first'正序 | 'last'倒序
           id: '<%- (frontmatter.permalink || frontmatter.to.path).slice(-16) %>', //  页面的唯一标识,长度不能超过50
           title: '「评论」<%- frontmatter.title %>', // GitHub issue 的标题
