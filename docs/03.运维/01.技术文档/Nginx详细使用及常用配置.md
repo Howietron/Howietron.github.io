@@ -1,0 +1,1393 @@
+# Nginx详细使用及常用配置
+
+## Nginx 简介
+
+**NGinx官网**  https://www.nginx.com/
+
+Nginx 是一款高性能的HTTP服务器和反**向代理服务器**，同时支持**IMAP/POP3/SMTP**代理服务
+
+**什么是Nginx**
+
+Nginx 是一款高性能的 http 服务器/反向代理服务器及电子邮件（IMAP/POP3）代理服务器。由俄罗斯的程序设计师伊戈尔·西索夫（Igor Sysoev）所开发，官方测试 nginx 能够支支撑 5 万并发链接， 并且 cpu、内存等资源消耗却非常低，运行非常稳定。 由C语言编写 
+
+Nginx 应用场景：
+
+1、http 服务器。Nginx 是一个 http 服务可以独立提供 http 服务。可以做**网页静态服务器**。
+
+2、**虚拟主机**。可以实现在一台服务器虚拟出多个网站。例如个人网站使用的虚拟主机。
+
+3、反向代理，负载均衡。当网站的访问量达到一定程度后，单台服务器不能满足用户的请求时，需要用多台服务器集群可以使用 nginx 做反向代理。并且多台服务器可以平均分担负载，不会因为某台服务器负载高宕机而某台服务器闲置的情况。  
+
+**这里我们使用 openresty来做讲解演示**
+
+## 安装
+
+首先 创建文件 制作自动安装脚本 
+
+vim  openresty.sh
+
+```sh
+yum install -y pcre-devel openssl-devel gcc curl
+cd /usr/local/
+wget https://openresty.org/download/openresty-1.17.8.2.tar.gz
+cd /usr/local/
+tar -zxvf openresty-1.17.8.2.tar.gz
+cd /usr/local/
+mv openresty-1.17.8.2 openresty
+cd /usr/local/openresty/
+ ./configure --with-luajit \
+            --without-http_redis2_module \
+            --with-http_iconv_module
+cd /usr/local/openresty/ 
+make && make install
+```
+
+赋予执行文件 
+
+chmod +x openresty.sh
+
+运行即可 
+
+./openresty.sh 
+
+然后修改环境 
+
+```sh
+$ vi /etc/profile
+ 
+export PATH=/usr/local/openresty/nginx/sbin:$PATH
+$ source /etc/profile
+```
+
+OK至此结束 配置完成 可以在 cd /usr/local/openresty/ 目录下找到NGinx 启动他就ok了   
+
+这个脚本可以复用  下次直接 赋予执行文件配置 环境即可  虚拟机内
+
+测试
+
+
+
+## Nginx 配置文件解读
+
+配置文件的几大块 
+
+```
+#   nginx配置文件主要分为六个区域： 核心区域 
+#    main(全局设置)  作用域是全局 
+#    events(nginx工作模式)
+#   upstream(负载均衡服务器设置）
+#    http(http设置) 
+#   	 sever(主机设置) 
+#   		 location(URL匹配)
+```
+
+配置文件 
+
+```
+#设置用户的权限  root nobody 指定 用户名虚拟机内用户   或者 Ip访问 
+#user  nobody;
+#设置工作进程数 一般为 Cpu 核心*2  4*2 
+worker_processes  8;  
+# 日志输出参数 
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+# 进程ID 
+#pid        logs/nginx.pid;
+
+events {
+#指定运行模型 
+    use epoll;
+# 工作连接数  默认512 根据自己的情况调整 
+    worker_connections  1024;
+}
+
+#http模块 
+http {
+#  能够支持的类型 在 这个文件下写着  mime.types
+    include       mime.types;
+# 默认的类型  在 application/octet-stream;
+    default_type  application/octet-stream;
+# 日志的格式 
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+#访问日志记录 
+    #access_log  logs/access.log  main;
+#启动 发送文件 
+    sendfile        on;
+# 开启TCP 推送 
+    #tcp_nopush     on;
+# 连接超时时间 
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+# 开启压缩文件 
+    #gzip  on;
+# 服务 
+# 服务分组  反向代理的核心关键 
+ upstream tuling {
+# ip 方式 最大失败3个连接  间隔 30S  权重为 5
+        server 127.0.0.1:8080       max_fails=3 fail_timeout=30s weight=5;
+#根据ip 利用Hash算法决定访问哪台机器 
+   ip_hash;
+    }
+    server {
+        listen       80;
+        server_name  localhost;
+        #charset koi8-r;
+#访问日志记录 以及位置  
+        #access_log  logs/host.access.log  main;
+# 匹配位置 支持正则表达式 
+        location / {
+# 寻找位置 默认在Nginx 目录下的  类型 
+            root   html;
+            index  index.html index.htm;
+			 proxy_pass   http://127.0.0.1;
+        }
+#错误信息 页面 
+        #error_page  404              /404.html;
+#将服务器错误页重定向到静态页/50x.html
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+#实例 入 将访问尾缀为 \.php 跳转到 127.0.0.1
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+#将PHP脚本传递给正在侦听127.0.0.1:9000的FastCGI服务器
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+#拒绝访问.htaccess文件，如果Apache的文档根
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+}
+```
+
+文字版描述 
+
+```
+################### main区域 #################################
+#user :来指定Nginx Worker进程运行用户以及用户组，默认由nobody账号运行。也可以创建nginx用户指定用户。
+#    创建www用户，在nginx配置文件中把user noboby noboby;-->user www www;即可
+#    /usr/sbin/groupadd www 
+#    /usr/sbin/useradd -g www www
+#worker_processes:来指定了Nginx要开启的子进程数。每个Nginx进程平均耗费10M~12M内存。根据经验，一般指定1个进程就足够了，如果是多核CPU，
+#    建议指定和CPU的数量一样的进程数即可。我这里写2，那么就会开启2个子进程，总共3个进程。
+#error_log:用来定义全局错误日志文件。日志输出级别有debug、info、notice、warn、error、crit可供选择，其中，debug输出日志最为最详细，而crit输出日志最少。
+#pid:用来指定进程id的存储文件位置。
+#worker_rlimit_nofile:用于指定一个nginx进程可以打开的最多文件描述符数目，这里是65535，需要使用命令“ulimit -n 65535”来设置。
+
+user  nobody;
+worker_processes  1;
+error_log  logs/error.log;
+error_log  logs/error.log  notice;
+error_log  logs/error.log  info;
+pid        logs/nginx.pid;
+
+
+#####################event 区域###############################
+#use：用来指定Nginx的工作模式。Nginx支持的工作模式有select、poll、kqueue、epoll、rtsig和/dev/poll。
+#    其中select和poll都是标准的工作模式，kqueue和epoll是高效的工作模式，不同的是epoll用在Linux平台上，
+#    而kqueue用在BSD系统中,对于Linux系统，epoll工作模式是首选。
+#worker_connections：用于定义Nginx每个进程的最大连接数，即接收前端的最大请求数，默认是1024。
+#    最大客户端连接数由worker_processes和worker_connections决定，即Max_clients=worker_processes*worker_connections，
+#   在作为反向代理时，Max_clients变为：Max_clients = worker_processes * worker_connections/4。 
+#    进程的最大连接数受Linux系统进程的最大打开文件数限制，在执行操作系统命令“ulimit -n 65536”后worker_connections的设置才能生效。
+
+events {
+    use epoll;
+    worker_connections  1024;
+}
+######################### http设置#####################################
+#    http模块负责HTTP服务器相关属性的配置，有server和upstream两个子模块
+http {
+#include ：来用设定文件的mime类型,类型在配置文件目录下的mime.type文件定义，来告诉nginx来识别文件类型。
+#default_type：设定了默认的类型为二进制流，也就是当文件类型未定义时使用这种方式，例如在没有配置asp的locate环境时，Nginx是不予解析的，此时，用浏览器访问asp文件就会出现下载了。
+#log_format：用于设置日志的格式，和记录哪些参数，这里设置为main，刚好用于access_log来纪录这种类型。
+    include       mime.types;
+    default_type  application/octet-stream;
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log  logs/access.log  main;
+    sendfile        on;
+    tcp_nopush     on;
+    keepalive_timeout  0;
+    keepalive_timeout  65;
+    gzip  on;
+
+######################### server设置#####################################
+#server用来定一个虚拟主机，标志定义虚拟主机开始。
+#listen：用于指定虚拟主机的服务端口。
+#server_name：用来指定IP地址或者域名，多个域名之间用空格分开。
+#root ：表示在这整个server虚拟主机内，全部的root web根目录。注意要和locate {}下面定义的区分开来。
+#index ：全局定义访问的默认首页地址。注意要和locate {}下面定义的区分开来。
+#charset：用于设置网页的默认编码格式。
+#access_log：用来指定此虚拟主机的访问日志存放路径，最后的main用于指定访问日志的输出格式。
+    server {
+        listen       80;
+        server_name  localhost;
+        root   /Users/hk/www;
+        index  index.php index.html index.htm; 
+        charset utf-8;
+        access_log  logs/host.access.log  main;
+        aerror_log  logs/host.error.log   main;
+
+######################### location设置#####################################
+# location模块 负载均衡,反向代理,虚拟域名等配置。是来定位的，定位URL，解析URL，它也提供了强大的正则匹配功能，也支持条件判断匹配，
+#    可以通过location指令实现Nginx对动,静态网页进行过滤处理。
+#/表示匹配访问根目录。
+#root指令用于指定访问根目录时，虚拟主机的web目录，这个目录可以是相对路径（相对路径是相对于nginx的安装目录）。也可以是绝对路径。
+#proxy_pass：代理转发，如果在proxy_pass后面的url加/，表示绝对根路径；如果没有/，表示相对路径，把匹配的路径部分也给代理走。
+#proxy_set_header：允许重新定义或者添加发往后端服务器的请求头。
+#include：加载配置文件，后面介绍nginx多个配置文件时候会提到。
+#root：定位localtion匹配的url资源路径。
+#index：定义页面显示html，一般和alias配合使用。
+        location / {       
+            root   html;    
+            index  index.html index.htm;
+        }
+
+        error_page  404              /404.html;       
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+        
+        
+        #反向代理配置
+        location /jyb {
+            proxy_pass http://qurt/;
+            proxy_read_timeout 1800s;
+            proxy_set_header   Host $host:$server_port;
+            proxy_set_header   X-real-ip  $remote_addr;
+            proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;  
+            proxy_set_header   X-Forwarded-Proto  $scheme; 
+         }
+     
+        
+         #采用uwsgi方式
+         location /python/ {
+             include uwsgi_params;
+             uwsgi_pass 127.0.0.1:33333;
+         }
+        
+        # FastCGI方式
+        location ~ \.php$ {
+            root           html;
+            fastcgi_pass   127.0.0.1:9000;
+            fastcgi_index  index.php;
+            fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+            include        fastcgi_params;
+        }
+        
+        #访问nginx本机目录的文件
+        location / {
+            root   /home/hk/;
+            index  index.html index.htm;
+        }
+        
+        location  /static/ {
+             alias /var/static/;
+        }
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        location ~ /\.ht {
+            deny  all;
+        }
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    server {
+        listen       8000;
+        listen       somename:8080;
+        server_name  somename  alias  another.alias;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+    }
+
+
+    # HTTPS server    
+    server {
+        listen       443 ssl;
+        server_name  localhost;
+
+        ssl_certificate      cert.pem;
+        ssl_certificate_key  cert.key;
+
+        ssl_session_cache    shared:SSL:1m;
+        ssl_session_timeout  5m;
+
+        ssl_ciphers  HIGH:!aNULL:!MD5;
+        ssl_prefer_server_ciphers  on;
+
+        location / {
+            root   html;
+            index  index.html index.htm;
+        }
+    }
+    
+##############upstram 模块################
+# upstream 模块  负载均衡模块，通过一个简单的调度算法来实现客户端IP到后端服务器的负载均衡。
+#Nginx的负载均衡模块目前支持4种调度算法:
+#    weight 轮询（默认）。每个请求按时间顺序逐一分配到不同的后端服务器，如果后端某台服务器宕机，故障系统被自动剔除，使用户访问不受影响。
+#        weight指定轮询权值，weight值越大，分配到的访问机率越高，主要用于后端每个服务器性能不均的情况下。
+#    ip_hash。每个请求按访问IP的hash结果分配，这样来自同一个IP的访客固定访问一个后端服务器，有效解决了动态网页存在的session共享问题。
+#    fair。比上面两个更加智能的负载均衡算法。此种算法可以依据页面大小和加载时间长短智能地进行负载均衡，
+#        也就是根据后端服务器的响应时间来分配请求，响应时间短的优先分配。Nginx本身是不支持fair的，如果需要使用这种调度算法，必须下载Nginx的upstream_fair模块。
+#    url_hash。按访问url的hash结果来分配请求，使每个url定向到同一个后端服务器，可以进一步提高后端缓存服务器的效率。Nginx本身是不支持url_hash的，
+#        如果需要使用这种调度算法，必须安装Nginx 的hash软件包。
+
+#在HTTP Upstream模块中，可以通过server指令指定后端服务器的IP地址和端口，同时还可以设定每个后端服务器在负载均衡调度中的状态。常用的状态有：
+#    down，表示当前的server暂时不参与负载均衡。
+#    backup，预留的备份机器。当其他所有的非backup机器出现故障或者忙的时候，才会请求backup机器，因此这台机器的压力最轻。
+#    max_fails，允许请求失败的次数，默认为1。当超过最大次数时，返回proxy_next_upstream 模块定义的错误。
+#    fail_timeout，在经历了max_fails次失败后，暂停服务的时间。max_fails可以和fail_timeout一起使用。
+
+#注意 当负载调度算法为ip_hash时，后端服务器在负载均衡调度中的状态不能是backup。
+#备注： nginx的worker_rlimit_nofile达到上限时，再有客户端链接报502错误. 用了log_format指令设置了日志格式之后，需要用access_log指令指定日志文件的存放路径。
+    
+    upstream server_group {
+        ip_hash;
+        server 192.168.123.1:80;
+        server 192.168.123.2:80 down;
+        server 192.168.123.3:8080  max_fails=3  fail_timeout=20s;
+        server 192.168.123.4:8080;
+    }
+    
+    server {
+        listen       80;
+        server_name  localhost;
+
+        location / {
+            proxy_pass http://server_group/;
+        }
+    }
+
+}
+
+
+######################nginx 中location中root和alias的区别 ####################
+    nginx指定文件路径有两种方式root和alias，这两者的用法区别，使用方法总结了。
+    root与alias主要区别在于nginx如何解释location后面的uri，这会使两者分别以不同的方式将请求映射到服务器文件上。
+    [root]
+        语法：root path
+        默认值：root html
+        配置段：http、server、location、if
+
+    [alias]
+        语法：alias path
+        配置段：location
+
+    root实例：
+
+        location ^~ /t/ {
+            root /www/root/html/;
+        }
+        如果一个请求的URI是/t/a.html时，web服务器将会返回服务器上的/www/root/html/t/a.html的文件。
+
+    alias实例：
+        location ^~ /t/ {
+            alias /www/root/html/new_t/;
+        }
+        如果一个请求的URI是/t/a.html时，web服务器将会返回服务器上的/www/root/html/new_t/a.html的文件。注意这里是new_t，
+        因为alias会把location后面配置的路径丢弃掉，把当前匹配到的目录指向到指定的目录。
+    注意：
+        1. 使用alias时，目录名后面一定要加"/"。
+        2. alias在使用正则匹配时，必须捕捉要匹配的内容并在指定的内容处使用。
+        3. alias只能位于location块中。（root可以不放在location中）
+```
+
+## 代理
+
+​		Nginx 服务器的反向代理服务是其最常用的重要功能，由反向代理服务也可以衍生出很多与此相关的 Nginx 服务器重要功能，比如后面会介绍的负载均衡。我们会先介绍 Nginx 的反向代理，当然在了解反向代理之前，我们需要先知道什么是代理以及什么是正向代理。
+
+​		在Java设计模式中，代理模式是这样定义的：**给某个对象提供一个代理对象，并由代理对象控制原对象的引用。****
+
+　　可能大家不太明白这句话，在举一个现实生活中的例子：比如我们要买一间二手房，虽然我们可以自己去找房源，但是这太花费时间精力了，而且房屋质量检测以及房屋过户等一系列手续也都得我们去办，再说现在这个社会，等我们找到房源，说不定房子都已经涨价了，那么怎么办呢？最简单快捷的方法就是找二手房中介公司（为什么？别人那里房源多啊），于是我们就委托中介公司来给我找合适的房子，以及后续的质量检测过户等操作，我们只需要选好自己想要的房子，然后交钱就行了。
+
+　　代理简单来说，就是如果我们想做什么，但又不想直接去做，那么这时候就找另外一个人帮我们去做。那么这个例子里面的中介公司就是给我们做代理服务的，我们委托中介公司帮我们找房子。
+
+　　Nginx 主要能够代理如下几种协议，其中用到的最多的就是做Http代理服务器。
+
+![image-20230628192507600](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133842.png)
+
+### 正向代理
+
+​		弄清楚什么是代理了，那么什么又是正向代理呢？
+
+　　这里我再举一个例子：大家都知道，现在国内是访问不了 Google的，那么怎么才能访问 Google呢？我们又想，美国人不是能访问 Google吗（这不废话，Google就是美国的），如果我们电脑的对外公网 IP 地址能变成美国的 IP 地址，那不就可以访问 Google了。你很聪明，VPN 就是这样产生的。我们在访问 Google 时，先连上 VPN 服务器将我们的 IP 地址变成美国的 IP 地址，然后就可以顺利的访问了。
+
+　　这里的 VPN 就是做正向代理的。正向代理服务器位于客户端和服务器之间，为了向服务器获取数据，客户端要向代理服务器发送一个请求，并指定目标服务器，代理服务器将目标服务器返回的数据转交给客户端。这里客户端是要进行一些正向代理的设置的。
+
+### 反向代理
+
+　　反向代理和正向代理的区别就是：**正向代理代理客户端，反向代理代理服务器。**
+
+　　反向代理，其实客户端对代理是无感知的，因为客户端不需要任何配置就可以访问，我们只需要将请求发送到反向代理服务器，由反向代理服务器去选择目标服务器获取数据后，在返回给客户端，此时反向代理服务器和目标服务器对外就是一个服务器，暴露的是代理服务器地址，隐藏了真实服务器IP地址。
+
+　　理解这两种代理的关键在于代理服务器所代理的对象是什么，正向代理代理的是客户端，我们需要在客户端进行一些代理的设置。而反向代理代理的是服务器，作为客户端的我们是无法感知到服务器的真实存在的。
+
+　　总结起来还是一句话：**正向代理代理客户端，反向代理代理服务器。**
+
+### 4、Nginx 反向代理
+
+　　范例：使用 nginx 反向代理 www.123.com 直接跳转到127.0.0.1:8080
+
+　　①、启动一个 tomcat，浏览器地址栏输入 127.0.0.1:8080，出现如下界面
+
+![image-20230628192640260](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133849.png)
+
+　　②、通过修改本地 host 文件，将 www.123.com 映射到 127.0.0.1
+
+```
+127.0.0.1 www.123.com
+```
+
+将上面代码添加到 Windows 的host 文件中，该文件位置在：
+
+![image-20230628192710848](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133900.png)
+
+　　配置完成之后，我们便可以通过 www.123.com:8080 访问到第一步出现的 Tomcat初始界面。
+
+　　那么如何只需要输入 www.123.com 便可以跳转到 Tomcat初始界面呢？便用到 nginx的反向代理。
+
+　　③、在 nginx.conf 配置文件中增加如下配置：
+
+```
+server {
+     listen       80;
+     server_name  www.123.com;
+ 
+     location / {
+	     proxy_pass http://127.0.0.1:8080;
+    	 index  index.html index.htm index.jsp;
+     }
+}
+```
+
+　　如上配置，我们监听80端口，访问域名为www.123.com，不加端口号时默认为80端口，故访问该域名时会跳转到127.0.0.1:8080路径上。
+
+　　我们在浏览器端输入 www.123.com 结果如下：
+
+![image-20230628192947239](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133904.png)
+
+　④、总结
+
+　　其实这里更贴切的说是通过nginx代理端口，原先访问的是8080端口，通过nginx代理之后，通过80端口就可以访问了。
+
+### Nginx 反向代理相关指令介绍
+
+#### **listen**
+
+　　该指令用于配置网络监听。主要有如下三种配置语法结构：
+
+　　一、配置监听的IP地址
+
+```
+listen address[:port] [default_server] [setfib=number] [backlog=number] [rcvbuf=size] [sndbuf=size] [deferred]
+    [accept_filter=filter] [bind] [ssl];
+```
+
+　　二、配置监听端口
+
+```
+listen port[default_server] [setfib=number] [backlog=number] [rcvbuf=size] [sndbuf=size] [accept_filter=filter] 
+    [deferred] [bind] [ipv6only=on|off] [ssl];
+```
+
+　三、配置 UNIX Domain Socket
+
+```
+listen unix:path [default_server]  [backlog=number] [rcvbuf=size] [sndbuf=size] [accept_filter=filter] 
+    [deferred] [bind] [ssl];
+```
+
+　　上面的配置看似比较复杂，其实使用起来是比较简单的：
+
+```
+1 listen *:80 | *:8080 #监听所有80端口和8080端口
+2 listen  IP_address:port   #监听指定的地址和端口号
+3 listen  IP_address     #监听指定ip地址所有端口
+4 listen port     #监听该端口的所有IP连接
+```
+
+　　下面分别解释每个选项的具体含义：
+
+　　1、address:IP地址，如果是 IPV6地址，需要使用中括号[] 括起来，比如[fe80::1]等。
+
+　　2、port:端口号，如果只定义了IP地址，没有定义端口号，那么就使用80端口。
+
+　　3、path:socket文件路径，如 var/run/nginx.sock等。
+
+　　4、default_server:标识符，将此虚拟主机设置为 address:port 的默认主机。（在 nginx-0.8.21 之前使用的是 default 指令）
+
+　　5、 setfib=number:Nginx-0.8.44 中使用这个变量监听 socket 关联路由表，目前只对 FreeBSD 起作用，不常用。
+
+　　6、backlog=number:设置监听函数listen()最多允许多少网络连接同时处于挂起状态，在 FreeBSD 中默认为 -1,其他平台默认为511.
+
+　　7、rcvbuf=size:设置监听socket接收缓存区大小。
+
+　　8、sndbuf=size:设置监听socket发送缓存区大小。
+
+　　9、deferred:标识符，将accept()设置为Deferred模式。
+
+　　10、accept_filter=filter:设置监听端口对所有请求进行过滤，被过滤的内容不能被接收和处理，本指令只在 FreeBSD 和 NetBSD 5.0+ 平台下有效。filter 可以设置为 dataready 或 httpready 。
+
+　　11、bind:标识符，使用独立的bind() 处理此address:port，一般情况下，对于端口相同而IP地址不同的多个连接，Nginx 服务器将只使用一个监听指令，并使用 bind() 处理端口相同的所有连接。
+
+　　12、ssl:标识符，设置会话连接使用 SSL模式进行，此标识符和Nginx服务器提供的 HTTPS 服务有关。
+
+
+
+#### server_name
+
+　　该指令用于虚拟主机的配置。通常分为以下两种：
+
+　　**1、基于名称的虚拟主机配置**
+
+　　语法格式如下：
+
+```
+server_name   name ...;
+```
+
+　　一、对于name 来说，可以只有一个名称，也可以有多个名称，中间用空格隔开。而每个名字由两段或者三段组成，每段之间用“.”隔开。
+
+```
+server_name 123.com www.123.com
+```
+
+　　二、可以使用通配符“*”，但通配符只能用在由三段字符组成的首段或者尾端，或者由两端字符组成的尾端。
+
+```
+server_name *.123.com www.123.*
+```
+
+　　三、还可以使用正则表达式，用“~”作为正则表达式字符串的开始标记。
+
+```
+server_name ~^www\d+\.123\.com$;
+```
+
+　　该表达式“~”表示匹配正则表达式，以www开头（“^”表示开头），紧跟着一个0~9之间的数字，在紧跟“.123.co”，最后跟着“m”($表示结尾)
+
+　　以上匹配的顺序优先级如下：
+
+```
+1 ①、准确匹配 server_name
+2 ②、通配符在开始时匹配 server_name 成功
+3 ③、通配符在结尾时匹配 server_name 成功
+4 ④、正则表达式匹配 server_name 成功
+```
+
+　　**2、基于 IP 地址的虚拟主机配置**
+
+　　语法结构和基于域名匹配一样，而且不需要考虑通配符和正则表达式的问题。
+
+```
+server_name 192.168.1.1
+```
+
+
+
+#### location
+
+　　该指令用于匹配 URL。
+
+　　语法如下：
+
+```
+1 location [ = | ~ | ~* | ^~] uri {
+2 
+3 }
+```
+
+　　1、= ：用于不含正则表达式的 uri 前，要求请求字符串与 uri 严格匹配，如果匹配成功，就停止继续向下搜索并立即处理该请求。
+
+　　2、~：用于表示 uri 包含正则表达式，并且区分大小写。
+
+　　3、~*：用于表示 uri 包含正则表达式，并且不区分大小写。
+
+　　4、^~：用于不含正则表达式的 uri 前，要求 Nginx 服务器找到标识 uri 和请求字符串匹配度最高的 location 后，立即使用此 location 处理请求，而不再使用 location 块中的正则 uri 和请求字符串做匹配。
+
+　　注意：如果 uri 包含正则表达式，则必须要有 ~ 或者 ~* 标识。
+
+
+
+#### proxy_pass
+
+　　该指令用于设置被代理服务器的地址。可以是主机名称、IP地址加端口号的形式。
+
+　　语法结构如下：
+
+```
+proxy_pass URL;
+```
+
+　　URL 为被代理服务器的地址，可以包含传输协议、主机名称或IP地址加端口号，URI等。
+
+```
+proxy_pass  http://www.123.com/uri;
+```
+
+
+
+#### index
+
+　　该指令用于设置网站的默认首页。
+
+　　语法为：
+
+```
+index  filename ...;
+```
+
+　　后面的文件名称可以有多个，中间用空格隔开。
+
+```
+index  index.html index.jsp;
+```
+
+　　通常该指令有两个作用：第一个是用户在请求访问网站时，请求地址可以不写首页名称；第二个是可以对一个请求，根据请求内容而设置不同的首页。
+
+## Nginx负载均衡
+
+### nginx负载均衡介绍
+
+负载均衡的意思是在服务器集群中，需要有一台服务器作为调度者，客户端所有的请求都由调度者接收，调度者再根据每台服务器的负载情况，将请求分配给对应的服务器去处理；
+
+ 在这个过程中，调度者如何合理分配任务，保证所有服务器将性能充分发挥，从而保持服务器集群的整体性能最优，这就是负载均衡的问题了。
+
+### nginx负载均衡的方式 
+
+####  轮询      
+
+轮询方式是Nginx负载默认的方式，顾名思义，所有请求都按照时间顺序分配到不同的服务上，如果服务Down掉，可以自动剔除，如下配置后轮训10001服务和10002服务。
+
+
+
+```undefined
+upstream  dalaoyang-server {
+       server    localhost:10001;
+       server    localhost:10002;
+}
+```
+
+####  权重
+
+指定每个服务的权重比例，weight和访问比率成正比，通常用于后端服务机器性能不统一，将性能好的分配权重高来发挥服务器最大性能，如下配置后10002服务的访问比率会是10001服务的二倍。
+
+
+
+```undefined
+upstream  dalaoyang-server {
+       server    localhost:10001 weight=1;
+       server    localhost:10002 weight=2;
+}
+```
+
+####  iphash
+
+每个请求都根据访问ip的hash结果分配，经过这样的处理，每个访客固定访问一个后端服务，如下配置（ip_hash可以和weight配合使用）。
+
+
+
+```undefined
+upstream  dalaoyang-server {
+       ip_hash; 
+       server    localhost:10001 weight=1;
+       server    localhost:10002 weight=2;
+}
+```
+
+#### 最少连接
+
+将请求分配到连接数最少的服务上。
+
+
+
+```undefined
+upstream  dalaoyang-server {
+       least_conn;
+       server    localhost:10001 weight=1;
+       server    localhost:10002 weight=2;
+}
+```
+
+#### fair
+
+按后端服务器的响应时间来分配请求，响应时间短的优先分配。 需要插件来帮我们实现  
+
+
+
+```undefined
+upstream  dalaoyang-server {
+       server    localhost:10001 weight=1;
+       server    localhost:10002 weight=2;
+       fair;  
+}
+```
+
+### Nginx配置
+
+以轮询为例，如下是nginx.conf完整代码。
+
+```cpp
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+
+http {
+   upstream  dalaoyang-server {
+       server    localhost:10001;
+       server    localhost:10002;
+   }
+
+   server {
+       listen       10000;
+       server_name  localhost;
+
+       location / {
+        proxy_pass http://dalaoyang-server;
+        proxy_redirect default;
+      }
+    }
+}
+```
+
+## Nginx限流熔断 
+
+作为优秀的负载均衡模块，目前是我们工作中用到最多的。其实，该模块是提供了我们需要的后端限流功能的。以下通过官方文档介绍。
+
+### 令牌桶算法
+
+![image-20230628193558868](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133922.png)
+
+算法思想是：
+
+- 令牌以固定速率产生，并缓存到令牌桶中；
+- 令牌桶放满时，多余的令牌被丢弃；
+- 请求要消耗等比例的令牌才能被处理；
+- 令牌不够时，请求被缓存。
+
+### 漏桶算法
+
+![image-20230628193923832](.assets/Nginx详细使用及常用配置/image-20230628193923832.png)
+
+算法思想是：
+
+- 水（请求）从上方倒入水桶，从水桶下方流出（被处理）；
+- 来不及流出的水存在水桶中（缓冲），以固定速率流出；
+- 水桶满后水溢出（丢弃）。
+- 这个算法的核心是：缓存请求、匀速处理、多余的请求直接丢弃。
+  相比漏桶算法，令牌桶算法不同之处在于它不但有一只“桶”，还有个队列，这个桶是用来存放令牌的，队列才是用来存放请求的。
+
+从作用上来说，漏桶和令牌桶算法最明显的区别就是是否允许突发流量(burst)的处理，漏桶算法能够强行限制数据的实时传输（处理）速率，对突发流量不做额外处理；而令牌桶算法能够在限制数据的平均传输速率的同时允许某种程度的突发传输。
+
+Nginx按请求速率限速模块使用的是漏桶算法，即能够强行保证请求的实时处理速度不会超过设置的阈值。
+
+### 案例
+
+通过查看nginx官方文档，https://www.nginx.cn/doc/
+
+**1、limit_conn_zone**
+
+**2、limit_req_zone**
+
+**3、ngx_http_upstream_module**
+
+前两种只能对客户端（即单一ip限流），并且文档也很全，但是经过测试发现，还是无法达到官方文档所说的结果,这里先简单的介绍一下前两种：
+
+**1、limit_conn_zone**
+
+**(1)nginx配置**
+
+```
+http{
+	limit_conn_zone $binary_remote_addr zone=one:10m;
+server
+	{
+		......
+		limit_conn one 10;
+		......
+	}
+}
+```
+
+其中“limit_conn one 10”既可以放在server层对整个server有效，也可以放在location中只对单独的location有效。
+
+该配置表明：客户端的并发连接数只能是10个。
+
+**(2)结果**
+
+ ab工具20并发去请求nginx，可以看到
+
+ Complete requests: 20
+
+ Failed requests: 9
+
+（由于nginx配置中一个ip并发连接数为10，而结果中成功数为+1的原因为 计数器 从零 开始 0 所以会多一个；nginx的日志中也可以看到有9个请求返回503）
+
+ **2、limit_req_zone**
+
+ **(1) nginx配置**
+
+```
+http{
+	limit_req_zone $binary_remote_addr zone=req_one:10m rate=1r/s;
+	server
+	{
+		......
+		limit_req zone=req_one burst=120;
+		......
+	}
+}
+```
+
+其中“limit_req zone=req_one burst=120”既可以放在server层对整个server有效，也可以放在location中只对单独的location有效。
+
+rate=1r/s的意思是每个地址每秒只能请求一次，也就是说令牌桶burst=120一共有120块令牌，并且每秒钟只新增1块令牌，120块令牌发完后，多出来的请求就会返回503。
+
+ **3、ngx_http_upstream_module**
+
+**(1)介绍**
+
+​		作为优秀的负载均衡模块，目前是我们工作中用到最多的。其实，该模块是提供了我们需要的后端限流
+
+功能的。通过官方文档介绍，该模块有一个参数：max_conns可以对服务端进行限流，可惜在商业版
+
+nginx中才能使用。然而，在nginx1.11.5版本以后，官方已经将该参数从商业版中脱离出来了，也就是
+
+说只要我们将生产上广泛使用的nginx1.9.12版本和1.10版本升级即可使用（通过测试可以看到，在旧版
+
+本的nginx中，如果加上该参数，nginx服务是无法启动的）。
+
+**(2)配置**
+
+```
+upstream xxxx{
+	server 127.0.0.1:8080 max_conns=10;
+	server 127.0.0.1:8081 max_conns=10;
+}
+```
+
+**(3)结果**（不便截图）
+
+用两台机器各自用*ab*工具向*nginx*发送*20*、*30*、*40*个并发请求：
+
+可以看到无论并发多少，成功的请求只有*12**个，成功的次数会多个**2*个，同时*1.2*的测试结果中成功
+
+次数也是*+1*，这里是两台机器，基于此种考虑，将机器增加至三台，果然成功的次数为*13*个。这里
+
+得出一个假想，成功的请求数会根据客户端的*+1*而*+1*（这里只是假设）**
+
+注：还有很重要的几点。max_conns是针对upstream中的单台server的，不是所有；nginx有个参数：
+
+worker_processes，max_conns是针对每个worker_processes的；
+
+**ab** **测试安装**
+
+```sh
+#ab运行需要依赖apr-util包，安装命令为：
+yum install apr-util
+#安装依赖 yum-utils中的yumdownload 工具，如果没有找到 yumdownload 命令可以
+yum install yum-utils
+cd /opt
+mkdir abtmp
+cd abtmp
+yum install yum-utils.noarch
+yumdownloader httpd-tools*
+rpm2cpio httpd-*.rpm | cpio -idmv
+#操作完成后 将会产生一个 usr 目录 ab文件就在这个usr 目录中
+#简单使用说明
+./ab -c 100 -n 10000 http://127.0.0.1/index.html
+#-c 100 即：每次并发100个
+#-n 10000 即： 共发送10000个请求
+```
+
+## nginx实现动静分离
+
+ Nginx的静态处理能力很强，但是动态处理能力不足，因此，在企业中常用动静分离技术。动静分离技术其实是采用代理的方式，在server{}段中加入带正则匹配的location来指定匹配项针对服务的动静分离：
+
+静态页面交给Nginx处理，
+
+动态页面交给服务器或Apache处理。在Nginx的配置中，是通过location配置段配合正则匹配实现静态与动态页面的不同处理方式。
+
+实现整个网站的动静分离，实现如下要求：
+
+1.前端Nginx收到静态请求，直接从NFS中返回给客户端。
+
+2.前端Nginx收到动态请求转交给通过FastCGI交给服务器处理。
+
+----如果得到静态结果直接从NFS取出结果交给Nginx然后返回给客户端。
+
+----如果需要数据处理服务器连接数据库后将结果返回给Nginx
+
+3.前端Nginx收到图片请求以.jpg、.png、.gif等请求交给后端Images服务器处理
+
+```
+location ~* \.(jpg|gif)$ {                # location匹配将图片交给Image处理
+	proxy_pass http://10.10.0.23:80;      # Image服务器要开启web服务
+}
+```
+
+至此配置就已经完成。达到了图片从图片服务器返回，静态nginx直接返回，动态交给后端进行处理。
+
+**总结**
+
+1.前端Nginx要做好location匹配，将*.php与*.jpg等进行反向代理。
+
+2.后端PHP服务器要修改配置文件，PHP自带配置文件只监听本地，且只允许本地访问
+
+3.后端Image服务器，不论是apache还是Nginx要开启WEB服务。根目录要指向图片根目录，且根目录下的图片要与原本图片文件目录结构一致。 
+
+## Nginx 性能调优 方案 
+
+```
+#设置用户的权限  root nobody 指定 用户名虚拟机内用户   或者 Ip访问 
+#user  nobody;
+#设置工作进程数 一般为 Cpu 核心*2  4*2 
+worker_processes  8;  
+# 日志输出参数 
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+# 进程ID 
+#pid        logs/nginx.pid;
+
+events {
+#指定运行模型 
+    use epoll;
+# 工作连接数  默认512 根据自己的情况调整 
+    worker_connections  1024;
+}
+
+#http模块 
+http {
+#  能够支持的类型 在 这个文件下写着  mime.types
+    include       mime.types;
+# 默认的类型  在 application/octet-stream;
+    default_type  application/octet-stream;
+# 日志的格式 
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+#访问日志记录 
+    #access_log  logs/access.log  main;
+#启动 发送文件 
+    sendfile        on;
+# 开启TCP 推送 
+    #tcp_nopush     on;
+# 连接超时时间 
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+# 开启压缩文件 
+    #gzip  on;
+# 服务 
+# 服务分组  反向代理的核心关键 
+ upstream tuling {
+# ip 方式 最大失败3个连接  间隔 30S  权重为 5
+        server 127.0.0.1:8080       max_fails=3 fail_timeout=30s weight=5;
+#根据ip 利用Hash算法决定访问哪台机器 
+   ip_hash;
+    }
+    server {
+        listen       80;
+        server_name  localhost;
+        #charset koi8-r;
+#访问日志记录 以及位置  
+        #access_log  logs/host.access.log  main;
+# 匹配位置 支持正则表达式 
+        location / {
+# 寻找位置 默认在Nginx 目录下的  类型 
+            root   html;
+            index  index.html index.htm;
+			 proxy_pass   http://127.0.0.1;
+        }
+#错误信息 页面 
+        #error_page  404              /404.html;
+#将服务器错误页重定向到静态页/50x.html
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+#实例 入 将访问尾缀为 \.php 跳转到 127.0.0.1
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+#将PHP脚本传递给正在侦听127.0.0.1:9000的FastCGI服务器
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+#拒绝访问.htaccess文件，如果Apache的文档根
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+}
+```
+
+## nginx镜像服务器
+
+Nginx的proxy_store作用是直接把静态文件在本地硬盘创建并读取，类似于七牛或者又拍这样的镜像CDN功能，首次访问会自动获取源站的静态图片等文件，之后的访问就是直接从CDN服务器读取，加快了速度。
+
+需要配置一下参数：
+
+  ```xml
+#启用缓存到本地的功能
+  proxy_store on;
+  #表示用户读写权限，如果在error中报路径不允许访问的话就用"chomod -R a+rw"将下面配置的路径改为相应的权限.
+  proxy_store_access user:rw group:rw all:rw;
+  #此处为文件的缓存路径，这个路径是和url中的文件路径一致的
+  proxy_temp_path 缓存目录;
+  #在上面的配置之后，虽然文件被缓存到了本地磁盘上，但每次请求仍会向远端拉取文件，为了避免去远端拉取文件，还必须增加：
+  if ( !-e $request_filename) {
+  proxy_pass http://192.168.10.10;
+  }
+  注："!-e $request_filename"正则表达式，匹配缓存目录中的文件与源文件是否存在。
+ "http://192.168.10.10" 源服务器的地址，默认端口80，如监听其他端口，此处要指出，例如4000端口，http://192.168.10.10:4000
+  ```
+
+整体配置如下（修改nginx的配置文件nginx.conf）：
+
+```xml
+  location / {                 //这里的location是要换成自己经过精确匹配的location，比如要缓存图片要写成 "location ~*\.(gif|jpg|jepg|png|bmp)${"
+    expires 3d;               //所有链接，浏览器缓存过期时间为3天
+    proxy_set_header Accept-Encoding '';
+    root /home/mpeg/nginx;          //此目录为服务器的根目录，下面的if语句就是判断此目录下是否有响应的文件
+    proxy_store on;             //表示开启缓存
+    proxy_store_access user:rw group:rw all:rw;//表示用户读写权限
+    proxy_temp_path /home/mpeg/nginx;    //此处为文件的缓存路径，这个路径是和url中的文件路径一致的
+    if ( !-e $request_filename) {
+        proxy_pass http://192.168.0.1;  //此处为要被代理的服务器的地址
+    }
+  }
+```
+
+## nginx 热备部署-双主模式 
+
+用nginx做负载均衡，作为架构的最前端或中间层，随着日益增长的访问量，需要给负载均衡做高可用架构，利用keepalived解决单点风险，一旦 nginx宕机能快速切换到备份服务器。
+
+
+
+安装 keepalived
+
+![image-20230629125722490](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629133946.png)
+
+安装   keepalived 
+
+```xml
+yum install nginx keepalived pcre-devel  -y
+```
+
+**配置keepalived高可用，修改主配置文件**
+
+　两台均备份
+
+```
+cp /etc/keepalived/keepalived.conf keepalived.conf.bak
+```
+
+```
+ global_defs {
+    vrrp_garp_interval 0
+    vrrp_gna_interval 0
+ }
+ vrrp_instance VI_1 {
+     state MASTER    #备用机 修改为 BACKUP
+     interface enp0s8
+     virtual_router_id 50
+     priority 100   # 参数 备用比主机低就可以了 
+     advert_int 1
+     authentication {
+         auth_type PASS
+         auth_pass 1111
+     }
+     virtual_ipaddress {
+         192.168.56.120
+     }
+ }
+```
+
+启动 两台的nginx
+
+```
+systemctl start nginx
+```
+
+启动 keepalived 
+
+```
+service keepalived start
+```
+
+此时可以通过检查下状态、ip、访问页面来确定是否成功
+
+**在日常使用时，通过使用keepalived可以实现对nginx的热备部署，nginx可以实现堆服务的热备部署**
+
+## nginx 安全认证
+
+​		ngx_http_auth_basic_module允许通过使用"HTTP基本身份认证"协议验证用户名和密码来限制对资源的访问。坦白点来说，如果想对某目录设置访问权限，可以使用ngx_http_auth_basic_module提供的功能。
+
+### 基本身份认证模块 语法及语义
+
+**auth_basic**
+
+​		语法：auth_basic string | off;
+
+​		语义：使用"HTTP基本身份认证"协议启用用户名和密码的验证。指定的参数用作realm，参数值可以包含变量（1.3.10、1.2.7）。设置特殊值off将关闭身份认证。
+
+​		参数值会作为提示显示在认证对话框标题栏中。
+
+**auth_basic_user_file**
+
+​		语法：auth_basic_user_file file;
+
+​		语义：指定存储用户名和密码的文件格式：
+
+```
+# comment
+name1:password1
+name2:password2:comment
+name3:password3
+1234
+```
+
+密码支持以下类型：
+
+​		1.使用crypt()函数加密。可以使用Apache Http Server发行版中的“htpasswd”实用程序或“openssl passwd”命令生成。
+
+​		2.使用基于MD5的密码算法（apr1）的Apache变体进行散列；可以使用相同的工具生成。
+
+​		3.由RFC2307中描述的"{scheme}data"语法（1.0.3+）指定。当前实现方案包括文本（用于示例，不应使用）、SHA(1.3.13)(SHA-1哈希文本，不应使用)、SSHA（SHA-1加盐哈希，被OpenLDAP、Dovecot等软件包使用）。
+
+**htpasswd 生成密码文件**
+
+​		htpasswd是开源Http服务器Apache Http Server的一个命令工具，所以本机如果没有该命令，需要先安装。
+
+```
+yum install httpd-tools -y
+1
+```
+
+  htpasswd指令用来创建和更新用于基本认证的用户认证密码文件。htpasswd指令必须对密码文件有读写权限，否则会返回错误码。
+
+  htpasswd参数列表：
+
+| 参数 | 参数说明                                     |
+| ---- | -------------------------------------------- |
+| -b   | 密码直接写在命令行中，而非使用提示输入的方式 |
+| -c   | 创建密码文件，若文件存在，则覆盖文件重新写入 |
+| -n   | 不更新密码文件，将用户名密码进行标准输出     |
+| -m   | 使用MD5算法对密码进行处理                    |
+| -d   | 使用CRYPT算法对密码进行处理                  |
+| -s   | 使用SHA算法对密码进行处理                    |
+| -p   | 不对密码进行加密处理，使用明文密码           |
+| -D   | 从密码文件中删除指定用户记录                 |
+
+ htpasswd生成Nginx密码文件：
+
+ 此时查看/usr/local/nginx/conf/nginxpasswd文件：
+
+```shell
+Securitit:$apr1$nuJ/GIEt$nH8z8kk0EFVq5oo9.qRzI/
+1
+```
+
+  若要在已有Nginx密码文件中追加用户，则无需-c参数：
+
+```shell
+htpasswd -b /usr/local/nginx/conf/nginxpasswd Csdn 111111
+1
+```
+
+  此时查看/usr/local/nginx/conf/nginxpasswd文件：
+
+```shell
+Securitit:$apr1$nuJ/GIEt$nH8z8kk0EFVq5oo9.qRzI/
+Csdn:$apr1$1IWZsiJl$q1K5CwAboegG1LO18Jdta0
+12
+```
+
+**基本身份认证模块 示例**
+
+  基于默认nginx.conf进行修改，使用上面生成的密码文件进行认证：
+
+```
+worker_processes  1;
+
+error_log  logs/error.log;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+
+    keepalive_timeout  65;
+
+    server {
+        listen       80;
+        server_name  securitit;
+
+        location / {
+	    	auth_basic "Please Input UserName And Password!";
+		
+	    	auth_basic_user_file nginxpasswd;
+        }
+
+    }
+
+}
+1234567891011121314151617181920212223242526272829
+```
+
+  通过./nginx -s reload平滑重启Nginx，通过浏览器访问http://192.168.20.9/，会出现如下的效果：
+
+![image-20230629132736006](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134000.png)
+
+  注：图标红色标记的即是auth_basic配置的参数值。
+
+  此时，需输入用户名和密码访问资源，若点击"取消"，则会提示访问受限：
+
+![image-20230629132755092](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134005.png)
+
+  输入正确的用户名和密码，可以正确访问目标资源：
+
+![image-20230629132809832](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134009.png)
+
+**基本身份认证模块 目录检索示例**
+
+  参照[Nginx 目录浏览模块 中文乱码 访问认证 ngx_http_autoindex_module](https://blog.csdn.net/securitit/article/details/109154694)，进行配置，Nginx可以进行目录检索，针对不同的目录，设置不同的权限，实现资源访问控制。
+
+  访问时，进行身份认证：
+
+![image-20230629133727840](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134014.png)
+
+  身份认证成功后，可以访问对应的目录及资源：
+
+![image-20230629133740506](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134020.png)
+
+![image-20230629133752355](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134025.png)
+
+  此时，对于目录的分层、分类、权限分离就显得很重要了。
+
+**总结**
+
+  应用系统中，对于目录的访问权限设置同样重要，但是一般不会使用"HTTP基本身份认证"这种方式。首先，面对大众用户，其表现形式显得很不友好，与现代Web UI的富表现技术相比，过于单薄。再者，使用密码文件的方式管理权限，过于笨重，当待管理的权限体量过大时，会造成很大的不变。
