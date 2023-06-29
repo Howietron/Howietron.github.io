@@ -1,5 +1,7 @@
 # Nginx详细使用及常用配置
 
+![1688017623260](https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/06/2920230629134724.png)
+
 ## Nginx 简介
 
 **NGinx官网**  https://www.nginx.com/
