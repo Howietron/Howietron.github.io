@@ -1,7 +1,5 @@
 name: CI
-
 #on: [push]
-
 # 在main分支发生push事件时触发。
 on:
   push:
@@ -27,7 +25,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }} # 版本
       - name: Build # 步骤3
-        run: npm install && npm run baiduPush
+        run: |
+          npm install
+          npm run build
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
         with:
