@@ -84,6 +84,7 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
             text: '运维',
             link: '/devops/',
             items: [
+              { text: 'Linux学习', link: '/pages/f78d73/' },
               { text: '技术文档', link: '/pages/9a7ee40fc232253e/' },
               { text: 'GitHub技巧', link: '/pages/4c778760be26d8b3/' },
               { text: 'Nodejs', link: '/pages/117708e0af7f0bd9/' },
@@ -123,7 +124,8 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
       // { text: '开往', link: 'https://travellings.link' },
     ],
     sidebarDepth: 2, // 侧边栏显示深度，默认1，最大2（显示到h3标题）
-    logo: '/img/logo.png', // 导航栏logo
+    // logo: '/img/logo.png', // 导航栏logo
+    logo: 'https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/09/1320230913133821.png', // 导航栏logo
     repo: 'Howietron/Howietron.github.io', // 导航栏右侧生成Github链接
     searchMaxSuggestions: 10, // 搜索结果显示最大数
     lastUpdated: '上次更新', // 开启更新时间，并配置前缀文字   string | boolean (取值为git提交时间)
@@ -220,7 +222,33 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
     },
 
     // 自定义hmtl(广告)模块
-    htmlModules
+    htmlModules,
+
+    // 私密文章配置
+    privatePage: {
+      openPrivate: true, // 开启私密文章验证，默认开启（true），如果不开启（false），则下面配置都失效
+      username: "youngkbt", // 管理员用户名
+      password: "123456", // 管理员密码
+      expire: "1d", // 登录过期时间：1d 代表 1 天，1h 代表 1 小时，仅支持这两个单位，不加单位代表秒。过期后访问私密文章重新输入用户名和密码。默认一天
+      loginPath: "/vdoing/login/", // 引用登录组件的 md 文章的 permalink（必须），无默认值
+      loginKey: "vdoing_manager", // 存储用户名信息的 key，默认是 vdoing_manager。系统通过该 key 验证是否登录、是否过期
+      loginSession: false, // 开启是否在网页关闭或刷新后，清除登录状态，这样再次访问网页，需要重新登录，默认为 false（不开启）
+      firstLogin: 0, // 第一次进入网站需要验证。用于封锁整个网站，默认为 0（不开启），1 和 2 都代表开启，区别：1 代表虽然进入网站成功，但是网站内的私密文章仍需要单独验证，2 代表进入网站成功，网站内的私密文章不需要单独验证，也就是网站内的私密文章和普通文章一样可以访问
+      firstLoginKey: "vdoing_first_login", // 存储用户名信息的 key，firstLogin 开启后该配置生效，默认为 vdoing_first_login，系统通过该 key 验证是否登录、是否过期
+      // 私密文章多组用户名密码
+      loginInfo: {
+        "/pages/55bab3/": [
+          { username: "linuxprobe", password: "0911" },
+        ],
+        "/pages/fbbe11/": [
+          { username: "linuxprobe", password: "0911" },
+        ],
+        "vdoing_first_login" :[  // 对应 firstLoginKey 的值
+          { username: "vdoing", password: "123456" },
+        ]
+      }
+    },
+
   },
 
   // 注入到页面<head>中的标签，格式[tagName, { attrName: attrValue }, innerHTML?]
@@ -230,13 +258,17 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
       'meta',
       {
         name: 'keywords',
-        content: '前端博客,个人技术博客,前端,前端开发,前端框架,web前端,前端面试题,技术文档,学习,面试,JavaScript,js,ES6,TypeScript,vue,python,css3,html5,Node,git,github,markdown',
+        content: '个人技术博客，前端、后端和运维相关,技术文档,学习,面试。。。',
       },
     ],
    // ['meta', { name: 'baidu-site-verification', content: '7F55weZDDc' }], // 百度统计的站长验证（你可以去掉）
     ['meta', { name: 'theme-color', content: '#11a8cd' }], // 移动浏览器主题颜色
     ['meta', {name: 'referrer', content: 'no-referrer-when-downgrade'}],
     ['link', { rel: 'stylesheet', href: 'https://at.alicdn.com/t/font_3114978_qe0b39no76.css' }], // 阿里云在线矢量库,字数和访客数图标使用
+
+    ['noscript', {}, '<meta http-equiv="refresh" content="0; url=https://www.youngkbt.cn/noscript/"><style>.theme-vdoing-content { display:none }'],  // 私密文章模块需要
+
+
     // [
     //   'script',
     //   {
@@ -366,10 +398,10 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
       "dynamic-title",
       {
         showIcon:
-          "https://wiki.howie.top/img/logo.png",
+          "https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/09/1320230913133821.png",
         showText: "ヾ(≧▽≦*)o欢迎回来！",
         hideIcon:
-          "https://wiki.howie.top/img/logo.png",
+          "https://cdn.jsdelivr.net/gh/Howietron/Howietron/img/2023/09/1320230913133821.png",
         hideText: "ಥ_ಥ不要走呀！",
         recoverTime: 2000, //  持续时间
       },
@@ -384,6 +416,9 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
       },
     ],
   ],
+
+  
+
 
   markdown: {
     lineNumbers: true,
