@@ -35,35 +35,23 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
             items: [
               // 说明：以下所有link的值只是在相应md文件头部定义的永久链接（不是什么特殊编码）。另外，注意结尾是有斜杠的
               {
-                text: '前端文章',
+                text: 'HTML&CSS',
                 items: [
-                  { text: 'JavaScript', link: '/pages/a61298/' },
+                  {text: 'HTML基础', link: '/pages/0f90d5/'},
+                  {text: 'CSS基础', link: '/pages/bc9ae0/'},
+                  {text: 'CSS进阶', link: '/pages/82afa9/'},
+                  {text: 'HTML5+CSS3', link: '/pages/bc6919/'}
                 ],
               },
               {
-                text: '学习笔记',
+                text: '前端笔记',
                 items: [
-                  { text: '《JavaScript教程》', link: '/note/javascript/' },
-                  { text: '《JavaScript高级程序设计》', link: '/note/js/' },
-                  { text: '《ES6 教程》', link: '/note/es6/' },
-                  { text: '《Vue》', link: '/note/vue/' },
-                  { text: '《React》', link: '/note/react/' },
-                  {
-                    text: '《TypeScript 从零实现 axios》',
-                    link: '/note/typescript-axios/',
-                  },
-                  {
-                    text: '《Git》',
-                    link: '/note/git/',
-                  },
-                  {
-                    text: 'TypeScript',
-                    link: '/pages/51afd6/',
-                  },
-                  {
-                    text: 'JS设计模式总结',
-                    link: '/pages/4643cd/',
-                  },
+                  { text: '《JavaScript教程》', link: '/javascript/' },
+                  { text: '《ES6 教程》', link: '/es6/' },
+                  { text: '《Vue》', link: '/vue/' },
+                  { text: '《React》', link: '/react/' },
+                  { text: '《TypeScript 从零实现 axios》', link: '/typescript-axios/' },
+                  { text: '《Git》', link: '/git/' }
                 ],
               },
             ],
