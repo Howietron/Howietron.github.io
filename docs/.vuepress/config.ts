@@ -44,6 +44,10 @@ export default defineConfig4CustomTheme<VdoingThemeConfig>({
                 ],
               },
               {
+                text: 'JavaScript',
+                link: '/pages/9043f0/',
+              },
+              {
                 text: '前端笔记',
                 items: [
                   { text: '《JavaScript教程》', link: '/javascript/' },
